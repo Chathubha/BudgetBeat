@@ -7,6 +7,7 @@
 let transactions = [];
 let deleteTargetId = null;
 let currentEditId = null;
+let currentUser = null;
 let chartInstances = {
   incomeVsExpense: null,
   trend: null,
@@ -101,9 +102,216 @@ const statCount = $('#statCount');
 // Current Date
 const currentDateSpan = $('#currentDate');
 
+// Auth DOM
+const authContainer = $('#authContainer');
+const appContainer = $('#appContainer');
+const loginFormEl = $('#loginForm');
+const registerFormEl = $('#registerForm');
+const loginFormElement = $('#loginFormElement');
+const registerFormElement = $('#registerFormElement');
+const loginEmail = $('#loginEmail');
+const loginPassword = $('#loginPassword');
+const regName = $('#regName');
+const regEmail = $('#regEmail');
+const regPassword = $('#regPassword');
+const regConfirm = $('#regConfirm');
+const showRegister = $('#showRegister');
+const showLogin = $('#showLogin');
+const authMessage = $('#authMessage');
+const logoutBtn = $('#logoutBtn');
+const sidebarUserName = $('#sidebarUserName');
+
+// ========== AUTH SYSTEM ==========
+function initAuth() {
+  // Check session
+  const savedUser = localStorage.getItem('budgetbeat_session');
+  if (savedUser) {
+    try {
+      currentUser = JSON.parse(savedUser);
+      showApp();
+    } catch {
+      currentUser = null;
+      showAuth();
+    }
+  } else {
+    showAuth();
+  }
+
+  // Toggle forms
+  showRegister.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormEl.classList.remove('active');
+    registerFormEl.classList.add('active');
+    clearAuthMessage();
+  });
+
+  showLogin.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerFormEl.classList.remove('active');
+    loginFormEl.classList.add('active');
+    clearAuthMessage();
+  });
+
+  // Register
+  registerFormElement.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = regName.value.trim();
+    const email = regEmail.value.trim().toLowerCase();
+    const password = regPassword.value;
+    const confirm = regConfirm.value;
+
+    if (!name || !email || !password) {
+      showAuthMessage('Please fill in all fields', 'error');
+      return;
+    }
+
+    if (password.length < 6) {
+      showAuthMessage('Password must be at least 6 characters', 'error');
+      return;
+    }
+
+    if (password !== confirm) {
+      showAuthMessage('Passwords do not match', 'error');
+      return;
+    }
+
+    // Check if email already registered
+    const users = getUsers();
+    if (users.find(u => u.email === email)) {
+      showAuthMessage('An account with this email already exists', 'error');
+      return;
+    }
+
+    // Create user
+    const user = {
+      id: Date.now().toString(36),
+      name,
+      email,
+      password: hashPassword(password),
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(user);
+    saveUsers(users);
+
+    // Auto-login
+    currentUser = { id: user.id, name: user.name, email: user.email };
+    localStorage.setItem('budgetbeat_session', JSON.stringify(currentUser));
+
+    showAuthMessage('Account created successfully! 🎉', 'success');
+    setTimeout(() => {
+      showApp();
+      registerFormElement.reset();
+    }, 800);
+  });
+
+  // Login
+  loginFormElement.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = loginEmail.value.trim().toLowerCase();
+    const password = loginPassword.value;
+
+    if (!email || !password) {
+      showAuthMessage('Please fill in all fields', 'error');
+      return;
+    }
+
+    const users = getUsers();
+    const user = users.find(u => u.email === email && u.password === hashPassword(password));
+
+    if (!user) {
+      showAuthMessage('Invalid email or password', 'error');
+      return;
+    }
+
+    currentUser = { id: user.id, name: user.name, email: user.email };
+    localStorage.setItem('budgetbeat_session', JSON.stringify(currentUser));
+
+    showAuthMessage('Welcome back! 👋', 'success');
+    setTimeout(() => {
+      showApp();
+      loginFormElement.reset();
+    }, 600);
+  });
+
+  // Logout
+  logoutBtn.addEventListener('click', () => {
+    currentUser = null;
+    localStorage.removeItem('budgetbeat_session');
+    showAuth();
+    // Clear sensitive form fields
+    loginFormElement.reset();
+    registerFormElement.reset();
+    clearAuthMessage();
+    showToast('Logged out successfully', 'success');
+  });
+
+  // Enter key to submit on auth forms
+  [loginFormElement, registerFormElement].forEach(form => {
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  });
+}
+
+function getUsers() {
+  try {
+    return JSON.parse(localStorage.getItem('budgetbeat_users') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  localStorage.setItem('budgetbeat_users', JSON.stringify(users));
+}
+
+// Simple hash function (NOT cryptographically secure - for demo only)
+function hashPassword(password) {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return 'hash_' + Math.abs(hash).toString(36);
+}
+
+function showApp() {
+  authContainer.classList.add('hidden');
+  appContainer.style.display = 'flex';
+  if (currentUser) {
+    sidebarUserName.textContent = currentUser.name || currentUser.email;
+  }
+  // Re-render everything for the logged-in user
+  loadTransactions();
+  renderAll();
+}
+
+function showAuth() {
+  authContainer.classList.remove('hidden');
+  appContainer.style.display = 'none';
+  loginFormEl.classList.add('active');
+  registerFormEl.classList.remove('active');
+  clearAuthMessage();
+}
+
+function showAuthMessage(msg, type) {
+  authMessage.textContent = msg;
+  authMessage.className = 'auth-message show ' + type;
+}
+
+function clearAuthMessage() {
+  authMessage.textContent = '';
+  authMessage.className = 'auth-message';
+}
+
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', () => {
-  loadTransactions();
+  // Initialize UI components
   renderCurrentDate();
   initTheme();
   initNavigation();
@@ -114,13 +322,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initQuickAdd();
   initAnalytics();
   setDefaultDate();
-  renderAll();
+
+  // Initialize auth (this will call showApp/showAuth which loads data and renders)
+  initAuth();
 });
 
 // ========== LOCAL STORAGE ==========
+function getStorageKey() {
+  const uid = currentUser ? currentUser.id : 'default';
+  return 'budgetbeat_txns_' + uid;
+}
+
 function loadTransactions() {
   try {
-    const data = localStorage.getItem('budgetbeat_transactions');
+    const key = getStorageKey();
+    const data = localStorage.getItem(key);
     transactions = data ? JSON.parse(data) : [];
     // Migrate old data (add type field)
     let migrated = false;
@@ -138,7 +354,8 @@ function loadTransactions() {
 }
 
 function saveTransactions() {
-  localStorage.setItem('budgetbeat_transactions', JSON.stringify(transactions));
+  const key = getStorageKey();
+  localStorage.setItem(key, JSON.stringify(transactions));
 }
 
 // ========== DATE HELPERS ==========

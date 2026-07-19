@@ -110,7 +110,7 @@ body {
 
 /* ========== ANIMATED BACKGROUND ========== */
 .app-container {
-  display: flex;
+  display: none;
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
