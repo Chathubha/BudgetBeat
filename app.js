@@ -1468,24 +1468,142 @@ function refreshFilterCategories() {
 
 // ========== QUICK ADD ==========
 function initQuickAdd() {
+  let editingBtn = null;
+
+  // Close any open editor when clicking elsewhere
+  document.addEventListener('click', (e) => {
+    if (editingBtn && !editingBtn.contains(e.target)) {
+      cancelEdit(editingBtn);
+      editingBtn = null;
+    }
+  });
+
   $$('.quick-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const amount = btn.dataset.amount;
+    btn.addEventListener('click', (e) => {
+      // If already editing this button, ignore (input handles its own events)
+      if (btn.classList.contains('quick-editing')) return;
+
+      // If another button is being edited, cancel it first
+      if (editingBtn && editingBtn !== btn) {
+        cancelEdit(editingBtn);
+      }
+
+      startEdit(btn);
+      editingBtn = btn;
+      e.stopPropagation();
+    });
+  });
+
+  function startEdit(btn) {
+    const oldAmount = btn.dataset.amount;
+    const amountEl = btn.querySelector('.quick-amount');
+    if (!amountEl) return;
+
+    btn.classList.add('quick-editing');
+
+    // Replace amount text with an input
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'quick-edit-input';
+    input.value = oldAmount;
+    input.min = '0.01';
+    input.step = '0.01';
+    input.autofocus = true;
+    input.setAttribute('aria-label', 'Edit amount');
+
+    // Create confirm/cancel buttons
+    const actions = document.createElement('div');
+    actions.className = 'quick-edit-actions';
+    actions.innerHTML = `
+      <button class="quick-edit-confirm" title="Confirm"><i class="fas fa-check"></i></button>
+      <button class="quick-edit-cancel" title="Cancel"><i class="fas fa-times"></i></button>
+    `;
+
+    amountEl.replaceWith(input);
+    btn.appendChild(actions);
+    input.focus();
+    input.select();
+
+    // Confirm handlers
+    const confirm = () => {
+      const val = parseFloat(input.value);
+      if (!val || val <= 0) {
+        showToast('Enter a valid amount', 'error');
+        input.focus();
+        input.select();
+        return;
+      }
+
       const cat = btn.dataset.cat;
       const type = btn.dataset.type || 'expense';
+      const desc = btn.querySelector('span').textContent;
 
-      const data = {
+      addTransaction({
         type,
-        description: btn.querySelector('span').textContent,
-        amount,
+        description: desc,
+        amount: val,
         category: cat,
         date: getToday(),
         paymentMethod: 'Cash',
         notes: ''
-      };
-      addTransaction(data);
+      });
+
+      finishEdit(btn, val);
+      editingBtn = null;
+    };
+
+    const cancel = () => {
+      cancelEdit(btn);
+      if (editingBtn === btn) editingBtn = null;
+    };
+
+    // Events
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); confirm(); }
+      if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
     });
-  });
+
+    actions.querySelector('.quick-edit-confirm').addEventListener('click', (ev) => {
+      ev.stopPropagation(); confirm();
+    });
+    actions.querySelector('.quick-edit-cancel').addEventListener('click', (ev) => {
+      ev.stopPropagation(); cancel();
+    });
+  }
+
+  function finishEdit(btn, newAmount) {
+    btn.classList.remove('quick-editing');
+    const input = btn.querySelector('.quick-edit-input');
+    const actions = btn.querySelector('.quick-edit-actions');
+    if (!input) return;
+
+    // Update data attribute and display
+    btn.dataset.amount = newAmount;
+    const formatted = 'Rs ' + Number(newAmount).toLocaleString('en-LK');
+    const amountSpan = document.createElement('span');
+    amountSpan.className = 'quick-amount';
+    amountSpan.textContent = formatted;
+
+    input.replaceWith(amountSpan);
+    if (actions) actions.remove();
+  }
+
+  function cancelEdit(btn) {
+    if (!btn || !btn.classList.contains('quick-editing')) return;
+    btn.classList.remove('quick-editing');
+    const input = btn.querySelector('.quick-edit-input');
+    const actions = btn.querySelector('.quick-edit-actions');
+    const oldAmount = btn.dataset.amount;
+
+    if (input) {
+      const formatted = 'Rs ' + Number(oldAmount).toLocaleString('en-LK');
+      const amountSpan = document.createElement('span');
+      amountSpan.className = 'quick-amount';
+      amountSpan.textContent = formatted;
+      input.replaceWith(amountSpan);
+    }
+    if (actions) actions.remove();
+  }
 }
 
 // ========== ANALYTICS PERIOD ==========
