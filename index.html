@@ -108,6 +108,10 @@
           <i class="fas fa-chart-line"></i>
           <span>Analytics</span>
         </a>
+        <a href="#" class="nav-item" data-page="categories">
+          <i class="fas fa-tags"></i>
+          <span>Categories</span>
+        </a>
       </nav>
       <div class="sidebar-footer">
         <div class="budget-summary-small">
@@ -322,7 +326,7 @@
                 <div class="form-group">
                   <label for="category"><i class="fas fa-tag"></i> Category</label>
                   <select id="category" required>
-                    <option value="">Select Category</option>
+                    <option value="" disabled hidden>Select Category</option>
                   </select>
                 </div>
               </div>
@@ -461,6 +465,23 @@
               <div class="stat-item">
                 <span class="stat-label">Transaction Count</span>
                 <strong class="stat-value" id="statCount">0</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CATEGORIES PAGE ===================== -->
+      <section class="page" id="page-categories">
+        <div class="categories-container">
+          <div class="categories-card">
+            <div class="categories-header">
+              <h2><i class="fas fa-tags"></i> Manage Categories</h2>
+              <p>Drag & drop to reorder. Add custom categories or reset to defaults.</p>
+            </div>
+            <div id="categoryManager">
+              <div class="cat-mgr-loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading categories...
               </div>
             </div>
           </div>

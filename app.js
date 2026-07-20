@@ -28,6 +28,42 @@ const CATEGORIES = {
   ]
 };
 
+// ========== CATEGORY STORAGE ==========
+function getCatKey() {
+  return 'budgetbeat_cats_' + (currentUser ? currentUser.id : 'default');
+}
+
+function loadCategories() {
+  try {
+    const data = localStorage.getItem(getCatKey());
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (parsed && parsed.income && parsed.expense) return parsed;
+    }
+  } catch {}
+  // Deep clone defaults
+  return {
+    income: [...CATEGORIES.income],
+    expense: [...CATEGORIES.expense]
+  };
+}
+
+function saveCategories(cats) {
+  localStorage.setItem(getCatKey(), JSON.stringify(cats));
+}
+
+const CAT_ICONS = {
+  'Salary': '💼', 'Freelance': '💻', 'Investments': '📈', 'Gifts': '🎁',
+  'Business': '🏪', 'Rental Income': '🏠', 'Dividends': '🪙', 'Other Income': '📦',
+  'Food & Drinks': '🍔', 'Transportation': '🚗', 'Shopping': '🛍️',
+  'Bills & Utilities': '💡', 'Entertainment': '🎬', 'Health': '💊',
+  'Education': '📚', 'Rent': '🏠', 'Savings': '💰', 'Other': '📦'
+};
+
+function getCatIcon(cat) {
+  return CAT_ICONS[cat] || '📦';
+}
+
 // ========== DOM REFS ==========
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -1139,7 +1175,8 @@ const pageConfigs = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of your finances', icon: 'chart-pie' },
   expenses: { title: 'Transactions', subtitle: 'Manage your income & expenses', icon: 'list-ul' },
   add: { title: 'Add Transaction', subtitle: 'Record income or expense', icon: 'plus-circle' },
-  analytics: { title: 'Analytics', subtitle: 'Deep insights into your finances', icon: 'chart-line' }
+  analytics: { title: 'Analytics', subtitle: 'Deep insights into your finances', icon: 'chart-line' },
+  categories: { title: 'Categories', subtitle: 'Manage & reorder your categories', icon: 'tags' }
 };
 
 function initNavigation() {
@@ -1217,6 +1254,12 @@ function navigateTo(page) {
   if (page === 'analytics') {
     setTimeout(() => renderAnalytics(), 150);
   }
+  if (page === 'add') {
+    setTimeout(updateCategoryOptions, 50);
+  }
+  if (page === 'categories') {
+    setTimeout(renderCategoryManager, 50);
+  }
 }
 
 // ========== TYPE TOGGLE & CATEGORY MANAGEMENT ==========
@@ -1241,8 +1284,11 @@ function initTypeToggle() {
     }
   };
 
-  // Initial style
-  setTimeout(updateTypeStyle, 50);
+  // Initial style + category options
+  setTimeout(() => {
+    updateTypeStyle();
+    updateCategoryOptions();
+  }, 50);
 
   // Update on change
   document.querySelectorAll('input[name="txnType"]').forEach(radio => {
@@ -1256,19 +1302,13 @@ function initTypeToggle() {
 
 function updateCategoryOptions() {
   const isIncome = typeIncome.checked;
-  const cats = isIncome ? CATEGORIES.income : CATEGORIES.expense;
+  const stored = loadCategories();
+  const cats = isIncome ? stored.income : stored.expense;
   const currentValue = categorySelect.value;
 
-  categorySelect.innerHTML = '<option value="">Select Category</option>' +
+  categorySelect.innerHTML = '<option value="" disabled hidden>Select Category</option>' +
     cats.map(c => {
-      const iconMap = {
-        'Salary': '💼', 'Freelance': '💻', 'Investments': '📈', 'Gifts': '🎁',
-        'Business': '🏪', 'Rental Income': '🏠', 'Dividends': '🪙', 'Other Income': '📦',
-        'Food & Drinks': '🍔', 'Transportation': '🚗', 'Shopping': '🛍️',
-        'Bills & Utilities': '💡', 'Entertainment': '🎬', 'Health': '💊',
-        'Education': '📚', 'Rent': '🏠', 'Savings': '💰', 'Other': '📦'
-      };
-      const icon = iconMap[c] || '📦';
+      const icon = getCatIcon(c);
       return `<option value="${c}">${icon} ${c}</option>`;
     }).join('');
 
@@ -1479,6 +1519,215 @@ function initTheme() {
     }, 200);
   });
 }
+
+// ========== DRAG & DROP CATEGORY MANAGER ==========
+function renderCategoryManager() {
+  const container = document.getElementById('categoryManager');
+  if (!container) return;
+
+  const stored = loadCategories();
+
+  container.innerHTML = `
+    <div class="cat-mgr-grid">
+      <div class="cat-mgr-column">
+        <div class="cat-mgr-header income-header">
+          <i class="fas fa-arrow-down"></i> Income Categories
+          <span class="cat-count">${stored.income.length}</span>
+        </div>
+        <div class="cat-mgr-list" data-type="income" id="catListIncome">
+          ${stored.income.map((c, i) => renderCatItem(c, i, 'income')).join('')}
+        </div>
+        <div class="cat-mgr-add">
+          <input type="text" class="cat-mgr-input" id="catInputIncome"
+            placeholder="Add income category..." maxlength="30" />
+          <button class="cat-mgr-add-btn income-add" onclick="addCategoryItem('income')">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="cat-mgr-column">
+        <div class="cat-mgr-header expense-header">
+          <i class="fas fa-arrow-up"></i> Expense Categories
+          <span class="cat-count">${stored.expense.length}</span>
+        </div>
+        <div class="cat-mgr-list" data-type="expense" id="catListExpense">
+          ${stored.expense.map((c, i) => renderCatItem(c, i, 'expense')).join('')}
+        </div>
+        <div class="cat-mgr-add">
+          <input type="text" class="cat-mgr-input" id="catInputExpense"
+            placeholder="Add expense category..." maxlength="30" />
+          <button class="cat-mgr-add-btn expense-add" onclick="addCategoryItem('expense')">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="cat-mgr-actions">
+      <button class="btn btn-secondary" onclick="resetAllCategories()">
+        <i class="fas fa-undo"></i> Reset to Defaults
+      </button>
+    </div>
+  `;
+
+  // Attach drag-and-drop after DOM is ready
+  setTimeout(attachDragDrop, 50);
+}
+
+function renderCatItem(cat, index, type) {
+  const icon = getCatIcon(cat);
+  return `
+    <div class="cat-item" draggable="true"
+         data-cat="${escHtml(cat)}" data-type="${type}" data-index="${index}">
+      <div class="cat-item-drag"><i class="fas fa-grip-lines"></i></div>
+      <span class="cat-item-icon">${icon}</span>
+      <span class="cat-item-name">${escHtml(cat)}</span>
+      <button class="cat-item-del" onclick="deleteCategoryItem('${type}','${escHtml(cat)}')"
+        ${CATEGORIES[type].includes(cat) ? '' : 'style="opacity:1"'}>
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `;
+}
+
+function attachDragDrop() {
+  const lists = document.querySelectorAll('.cat-mgr-list');
+  lists.forEach(list => {
+    // Remove old listeners by cloning drag events
+    list.addEventListener('dragstart', handleDragStart);
+    list.addEventListener('dragend', handleDragEnd);
+    list.addEventListener('dragover', handleDragOver);
+    list.addEventListener('dragenter', handleDragEnter);
+    list.addEventListener('dragleave', handleDragLeave);
+    list.addEventListener('drop', handleDrop);
+  });
+
+  // Also allow Enter key on input
+  document.querySelectorAll('.cat-mgr-input').forEach(inp => {
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const type = inp.id === 'catInputIncome' ? 'income' : 'expense';
+        addCategoryItem(type);
+      }
+    });
+  });
+}
+
+let dragSource = null;
+
+function handleDragStart(e) {
+  const item = e.target.closest('.cat-item');
+  if (!item) return;
+  dragSource = item;
+  item.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', item.dataset.cat);
+}
+
+function handleDragEnd(e) {
+  document.querySelectorAll('.cat-item.dragging').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.cat-mgr-list.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragSource = null;
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+  const list = e.target.closest('.cat-mgr-list');
+  if (list) list.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  const list = e.target.closest('.cat-mgr-list');
+  if (list && !list.contains(e.relatedTarget)) {
+    list.classList.remove('drag-over');
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const targetList = e.target.closest('.cat-mgr-list');
+  if (!targetList) return;
+  targetList.classList.remove('drag-over');
+
+  // Find the item we're dropping on (for insertion point)
+  const dropTarget = e.target.closest('.cat-item');
+  if (!dragSource) return;
+
+  const fromType = dragSource.dataset.type;
+  const toType = targetList.dataset.type;
+  const catName = dragSource.dataset.cat;
+
+  if (fromType === toType && dragSource === dropTarget) return;
+
+  const stored = loadCategories();
+
+  // Remove from source
+  stored[fromType] = stored[fromType].filter(c => c !== catName);
+
+  // Add to target
+  if (fromType !== toType) {
+    stored[toType].push(catName);
+  } else {
+    // Reorder within same list
+    const dropIndex = dropTarget
+      ? Array.from(targetList.querySelectorAll('.cat-item')).indexOf(dropTarget)
+      : stored[toType].length;
+    stored[toType].splice(dropIndex, 0, catName);
+  }
+
+  saveCategories(stored);
+  renderCategoryManager();
+  showToast('Categories updated!', 'success');
+}
+
+// Expose drag handlers globally
+window.addCategoryItem = function(type) {
+  const input = document.getElementById('catInput' + type.charAt(0).toUpperCase() + type.slice(1));
+  const name = input.value.trim();
+  if (!name) {
+    showToast('Please enter a category name', 'error');
+    return;
+  }
+
+  // Check duplicate (case-insensitive)
+  const stored = loadCategories();
+  if (stored[type].some(c => c.toLowerCase() === name.toLowerCase())) {
+    showToast('Category already exists!', 'error');
+    return;
+  }
+
+  stored[type].push(name);
+  saveCategories(stored);
+  input.value = '';
+  renderCategoryManager();
+  if (typeIncome.checked === (type === 'income') || (!typeIncome.checked && type === 'expense')) {
+    updateCategoryOptions();
+  }
+  showToast('Category added!', 'success');
+};
+
+window.deleteCategoryItem = function(type, cat) {
+  const stored = loadCategories();
+  stored[type] = stored[type].filter(c => c !== cat);
+  saveCategories(stored);
+  renderCategoryManager();
+  updateCategoryOptions();
+  showToast('Category removed', 'info');
+};
+
+window.resetAllCategories = function() {
+  saveCategories({
+    income: [...CATEGORIES.income],
+    expense: [...CATEGORIES.expense]
+  });
+  renderCategoryManager();
+  updateCategoryOptions();
+  showToast('Categories reset to defaults', 'success');
+};
 
 // ========== TOAST ==========
 function showToast(message, type = 'success') {
