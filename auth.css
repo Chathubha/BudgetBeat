@@ -297,6 +297,71 @@
   border: 1px solid rgba(0, 184, 148, 0.2);
 }
 
+/* ========== AUTH EXTRAS (Remember Me + Forgot Password) ========== */
+.auth-extras {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -4px;
+  margin-bottom: 8px;
+}
+
+.auth-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #636e72);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+.auth-checkbox .checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border, #dfe6e9);
+  border-radius: 4px;
+  background: var(--bg-card, #ffffff);
+  transition: var(--transition, all 0.3s ease);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.auth-checkbox input[type="checkbox"]:checked + .checkmark {
+  background: var(--primary, #6c5ce7);
+  border-color: var(--primary, #6c5ce7);
+}
+
+.auth-checkbox input[type="checkbox"]:checked + .checkmark::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.auth-forgot-link {
+  font-size: 13px;
+  color: var(--primary, #6c5ce7);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition, all 0.3s ease);
+  cursor: pointer;
+}
+
+.auth-forgot-link:hover {
+  color: var(--primary-dark, #5a4bd1);
+  text-decoration: underline;
+}
+
 /* ========== PASSWORD TOGGLE ========== */
 .auth-input-group .password-toggle {
   position: absolute;

@@ -36,12 +36,46 @@
             <i class="fas fa-lock"></i>
             <input type="password" id="loginPassword" placeholder="Password" required />
           </div>
+          <div class="auth-extras">
+            <label class="auth-checkbox">
+              <input type="checkbox" id="rememberMe" />
+              <span class="checkmark"></span>
+              Remember me
+            </label>
+            <a href="#" class="auth-forgot-link" id="showForgot">Forgot Password?</a>
+          </div>
           <button type="submit" class="auth-btn">
             <i class="fas fa-arrow-right"></i> Log In
           </button>
         </form>
         <p class="auth-switch">
           Don't have an account? <a href="#" id="showRegister">Sign Up</a>
+        </p>
+      </div>
+
+      <!-- Forgot Password Form -->
+      <div class="auth-form" id="forgotForm">
+        <h2>Reset Password 🔒</h2>
+        <p class="auth-subtitle">Enter your email and set a new password</p>
+        <form id="forgotFormElement" autocomplete="off">
+          <div class="auth-input-group">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="forgotEmail" placeholder="Your registered email" required />
+          </div>
+          <div class="auth-input-group">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="forgotNewPassword" placeholder="New password (min 6 chars)" minlength="6" required />
+          </div>
+          <div class="auth-input-group">
+            <i class="fas fa-check-circle"></i>
+            <input type="password" id="forgotConfirmPassword" placeholder="Confirm new password" required />
+          </div>
+          <button type="submit" class="auth-btn">
+            <i class="fas fa-key"></i> Reset Password
+          </button>
+        </form>
+        <p class="auth-switch">
+          Remember your password? <a href="#" id="showLoginFromForgot">Log In</a>
         </p>
       </div>
 

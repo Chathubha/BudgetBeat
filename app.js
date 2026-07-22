@@ -160,6 +160,18 @@ const sidebarUserName = $('#sidebarUserName');
 const downloadReportBtn = $('#downloadReportBtn');
 const printReport = $('#printReport');
 
+// Forgot Password DOM
+const forgotForm = $('#forgotForm');
+const forgotFormElement = $('#forgotFormElement');
+const forgotEmail = $('#forgotEmail');
+const forgotNewPassword = $('#forgotNewPassword');
+const forgotConfirmPassword = $('#forgotConfirmPassword');
+const showForgot = $('#showForgot');
+const showLoginFromForgot = $('#showLoginFromForgot');
+
+// Remember Me
+const rememberMe = $('#rememberMe');
+
 // ========== AUTH SYSTEM ==========
 function initAuth() {
   // Check session
@@ -176,17 +188,42 @@ function initAuth() {
     showAuth();
   }
 
+  // Load saved credentials (Remember Me)
+  loadSavedCredentials();
+
   // Toggle forms
   showRegister.addEventListener('click', (e) => {
     e.preventDefault();
     loginFormEl.classList.remove('active');
     registerFormEl.classList.add('active');
+    forgotForm.classList.remove('active');
     clearAuthMessage();
   });
 
   showLogin.addEventListener('click', (e) => {
     e.preventDefault();
     registerFormEl.classList.remove('active');
+    loginFormEl.classList.add('active');
+    forgotForm.classList.remove('active');
+    clearAuthMessage();
+  });
+
+  // Forgot Password toggle
+  showForgot.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormEl.classList.remove('active');
+    registerFormEl.classList.remove('active');
+    forgotForm.classList.add('active');
+    clearAuthMessage();
+    // Pre-fill email from login form
+    if (loginEmail.value) {
+      forgotEmail.value = loginEmail.value;
+    }
+  });
+
+  showLoginFromForgot.addEventListener('click', (e) => {
+    e.preventDefault();
+    forgotForm.classList.remove('active');
     loginFormEl.classList.add('active');
     clearAuthMessage();
   });
@@ -237,7 +274,7 @@ function initAuth() {
     currentUser = { id: user.id, name: user.name, email: user.email };
     localStorage.setItem('budgetbeat_session', JSON.stringify(currentUser));
 
-    showAuthMessage('Account created successfully! 🎉', 'success');
+    showAuthMessage('Account created successfully!', 'success');
     setTimeout(() => {
       showApp();
       registerFormElement.reset();
@@ -266,11 +303,68 @@ function initAuth() {
     currentUser = { id: user.id, name: user.name, email: user.email };
     localStorage.setItem('budgetbeat_session', JSON.stringify(currentUser));
 
-    showAuthMessage('Welcome back! 👋', 'success');
+    // Remember Me
+    if (rememberMe.checked) {
+      localStorage.setItem('budgetbeat_saved_login', JSON.stringify({ email, password }));
+    } else {
+      localStorage.removeItem('budgetbeat_saved_login');
+    }
+
+    showAuthMessage('Welcome back!', 'success');
     setTimeout(() => {
       showApp();
       loginFormElement.reset();
     }, 600);
+  });
+
+  // Forgot Password
+  forgotFormElement.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = forgotEmail.value.trim().toLowerCase();
+    const newPass = forgotNewPassword.value;
+    const confirmPass = forgotConfirmPassword.value;
+
+    if (!email || !newPass || !confirmPass) {
+      showAuthMessage('Please fill in all fields', 'error');
+      return;
+    }
+
+    if (newPass.length < 6) {
+      showAuthMessage('Password must be at least 6 characters', 'error');
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      showAuthMessage('Passwords do not match', 'error');
+      return;
+    }
+
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.email === email);
+
+    if (userIndex === -1) {
+      showAuthMessage('No account found with this email', 'error');
+      return;
+    }
+
+    // Update password
+    users[userIndex].password = hashPassword(newPass);
+    saveUsers(users);
+
+    // Clear any saved login with old password
+    const saved = JSON.parse(localStorage.getItem('budgetbeat_saved_login') || 'null');
+    if (saved && saved.email === email) {
+      localStorage.removeItem('budgetbeat_saved_login');
+    }
+
+    showAuthMessage('Password reset successfully! You can now log in.', 'success');
+    forgotFormElement.reset();
+    setTimeout(() => {
+      forgotForm.classList.remove('active');
+      loginFormEl.classList.add('active');
+      loginEmail.value = email;
+      clearAuthMessage();
+    }, 1500);
   });
 
   // Logout
@@ -281,12 +375,13 @@ function initAuth() {
     // Clear sensitive form fields
     loginFormElement.reset();
     registerFormElement.reset();
+    forgotFormElement.reset();
     clearAuthMessage();
     showToast('Logged out successfully', 'success');
   });
 
   // Enter key to submit on auth forms
-  [loginFormElement, registerFormElement].forEach(form => {
+  [loginFormElement, registerFormElement, forgotFormElement].forEach(form => {
     form.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -294,6 +389,18 @@ function initAuth() {
       }
     });
   });
+}
+
+// ========== REMEMBER ME ==========
+function loadSavedCredentials() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('budgetbeat_saved_login') || 'null');
+    if (saved && saved.email && saved.password) {
+      loginEmail.value = saved.email;
+      loginPassword.value = saved.password;
+      rememberMe.checked = true;
+    }
+  } catch {}
 }
 
 function getUsers() {
@@ -335,6 +442,7 @@ function showAuth() {
   appContainer.style.display = 'none';
   loginFormEl.classList.add('active');
   registerFormEl.classList.remove('active');
+  forgotForm.classList.remove('active');
   clearAuthMessage();
 }
 
