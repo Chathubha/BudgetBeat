@@ -128,6 +128,7 @@ const themeBtn = $('#themeBtn');
 
 // Analytics
 const analyticsPeriod = $('#analyticsPeriod');
+const analyticsDayPicker = $('#analyticsDayPicker');
 const statIncome = $('#statIncome');
 const statExpense = $('#statExpense');
 const statBalance = $('#statBalance');
@@ -156,6 +157,8 @@ const showLogin = $('#showLogin');
 const authMessage = $('#authMessage');
 const logoutBtn = $('#logoutBtn');
 const sidebarUserName = $('#sidebarUserName');
+const downloadReportBtn = $('#downloadReportBtn');
+const printReport = $('#printReport');
 
 // ========== AUTH SYSTEM ==========
 function initAuth() {
@@ -813,7 +816,7 @@ function renderExpensesTable() {
   }).join('');
 }
 
-// ========== INCOME VS EXPENSE CHART (Doughnut) ==========
+// ========== EXPENSE BY CATEGORY CHART (Doughnut) ==========
 function renderIncomeVsExpenseChart(incomeTotal, expenseTotal) {
   const canvas = document.getElementById('incomeVsExpenseChart');
   if (!canvas) return;
@@ -823,18 +826,31 @@ function renderIncomeVsExpenseChart(incomeTotal, expenseTotal) {
     chartInstances.incomeVsExpense.destroy();
   }
 
-  if (incomeTotal === 0 && expenseTotal === 0) {
+  const expenses = transactions.filter(t => t.type === 'expense');
+  if (!expenses.length) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     return;
   }
 
+  const categoryMap = {};
+  expenses.forEach(t => {
+    const cat = t.category || 'Other';
+    categoryMap[cat] = (categoryMap[cat] || 0) + t.amount;
+  });
+
+  const sortedCats = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+  const labels = sortedCats.map(c => c[0]);
+  const data = sortedCats.map(c => c[1]);
+
+  const COLORS = ['#ff6b6b', '#ffa502', '#ffc048', '#ff4757', '#ff6348', '#e17055', '#d63031', '#fdcb6e', '#e84393', '#6c5ce7'];
+
   chartInstances.incomeVsExpense = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Income', 'Expenses'],
+      labels: labels,
       datasets: [{
-        data: [incomeTotal, expenseTotal],
-        backgroundColor: ['#00b894', '#ff6b6b'],
+        data: data,
+        backgroundColor: COLORS.slice(0, labels.length),
         borderWidth: 2,
         borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim() || '#ffffff'
       }]
@@ -967,11 +983,22 @@ function renderTrendChart() {
 
 // ========== ANALYTICS ==========
 function renderAnalytics() {
-  const period = parseInt(analyticsPeriod.value);
-  const isAll = analyticsPeriod.value === 'all';
+  const val = analyticsPeriod.value;
+  const isAll = val === 'all';
+  const isDay = val === 'day';
 
-  let filtered = isAll ? [...transactions] : [];
-  if (!isAll) {
+  let filtered = [];
+  if (isAll) {
+    filtered = [...transactions];
+  } else if (isDay) {
+    const selectedDate = analyticsDayPicker.value;
+    if (!selectedDate) {
+      filtered = [];
+    } else {
+      filtered = transactions.filter(t => t.date === selectedDate);
+    }
+  } else {
+    const period = parseInt(val);
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - period);
     const cutoffStr = cutoff.toISOString().split('T')[0];
@@ -1608,7 +1635,12 @@ function initQuickAdd() {
 
 // ========== ANALYTICS PERIOD ==========
 function initAnalytics() {
-  analyticsPeriod.addEventListener('change', renderAnalytics);
+  analyticsDayPicker.value = new Date().toISOString().split('T')[0];
+  analyticsPeriod.addEventListener('change', () => {
+    analyticsDayPicker.style.display = analyticsPeriod.value === 'day' ? 'inline-block' : 'none';
+    renderAnalytics();
+  });
+  analyticsDayPicker.addEventListener('change', renderAnalytics);
 }
 
 // ========== THEME ==========
@@ -1862,3 +1894,178 @@ function showToast(message, type = 'success') {
 // ========== EXPOSE HANDLERS ==========
 window.handleDeleteClick = handleDeleteClick;
 window.handleEditClick = handleEditClick;
+
+// ========== DOWNLOAD REPORT ==========
+function generateReport() {
+  const incomeTotal = getIncomeTotal();
+  const expenseTotal = getExpenseTotal();
+  const balance = incomeTotal - expenseTotal;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  const expenses = transactions.filter(t => t.type === 'expense');
+  const incomes = transactions.filter(t => t.type === 'income');
+
+  const categoryMap = {};
+  expenses.forEach(t => {
+    const cat = t.category || 'Other';
+    categoryMap[cat] = (categoryMap[cat] || 0) + t.amount;
+  });
+  const sortedCats = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+  const maxCatAmt = sortedCats.length ? sortedCats[0][1] : 1;
+
+  const incomeCatMap = {};
+  incomes.forEach(t => {
+    const cat = t.category || 'Other';
+    incomeCatMap[cat] = (incomeCatMap[cat] || 0) + t.amount;
+  });
+  const sortedIncomeCats = Object.entries(incomeCatMap).sort((a, b) => b[1] - a[1]);
+  const maxIncomeCatAmt = sortedIncomeCats.length ? sortedIncomeCats[0][1] : 1;
+
+  const sortedTxns = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
+
+  let catRows = '';
+  sortedCats.forEach(([cat, amt]) => {
+    const pct = ((amt / maxCatAmt) * 100).toFixed(0);
+    catRows += `
+      <div class="report-cat-bar">
+        <span class="report-cat-name">${escHtml(cat)}</span>
+        <div class="report-cat-bar-fill"><div class="report-cat-bar-inner" style="width:${pct}%;background:#ff6b6b;"></div></div>
+        <span class="report-cat-amount">${formatCurrency(amt)}</span>
+      </div>`;
+  });
+
+  let incomeCatRows = '';
+  sortedIncomeCats.forEach(([cat, amt]) => {
+    const pct = ((amt / maxIncomeCatAmt) * 100).toFixed(0);
+    incomeCatRows += `
+      <div class="report-cat-bar">
+        <span class="report-cat-name">${escHtml(cat)}</span>
+        <div class="report-cat-bar-fill"><div class="report-cat-bar-inner" style="width:${pct}%;background:#00b894;"></div></div>
+        <span class="report-cat-amount">${formatCurrency(amt)}</span>
+      </div>`;
+  });
+
+  let txnRows = '';
+  sortedTxns.forEach((t, i) => {
+    const isIncome = t.type === 'income';
+    const prefix = isIncome ? '+' : '-';
+    const cls = isIncome ? 'amount-income' : 'amount-expense';
+    const badgeCls = isIncome ? 'income' : 'expense';
+    const dt = new Date(t.date + 'T00:00:00');
+    const dateDisplay = dt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    txnRows += `
+      <tr>
+        <td>${i + 1}</td>
+        <td><span class="report-type-badge ${badgeCls}">${t.type}</span></td>
+        <td>${escHtml(t.description)}</td>
+        <td>${escHtml(t.category)}</td>
+        <td>${t.paymentMethod || '-'}</td>
+        <td class="${cls}">${prefix}${formatCurrency(t.amount)}</td>
+        <td>${dateDisplay}</td>
+        <td>${escHtml(t.notes || '')}</td>
+      </tr>`;
+  });
+
+  const highestInc = incomes.length ? Math.max(...incomes.map(t => t.amount)) : 0;
+  const highestExp = expenses.length ? Math.max(...expenses.map(t => t.amount)) : 0;
+  const avgPerTxn = transactions.length ? (incomeTotal + expenseTotal) / transactions.length : 0;
+
+  printReport.innerHTML = `
+    <div class="report-header">
+      <div class="report-logo"><i class="fas fa-wallet"></i>BudgetBeat</div>
+      <div class="report-subtitle">Personal Finance Report</div>
+      <div class="report-date">Generated on ${dateStr} at ${timeStr}</div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Financial Summary</div>
+      <div class="report-summary-grid">
+        <div class="report-summary-item">
+          <div class="label">Total Income</div>
+          <div class="value income">${formatCurrency(incomeTotal)}</div>
+        </div>
+        <div class="report-summary-item">
+          <div class="label">Total Expenses</div>
+          <div class="value expense">${formatCurrency(expenseTotal)}</div>
+        </div>
+        <div class="report-summary-item">
+          <div class="label">Net Balance</div>
+          <div class="value ${balance >= 0 ? 'balance-pos' : 'balance-neg'}">${formatCurrency(balance)}</div>
+        </div>
+        <div class="report-summary-item">
+          <div class="label">Transactions</div>
+          <div class="value" style="color:#2d3436;">${transactions.length}</div>
+        </div>
+      </div>
+      <div class="report-summary-grid">
+        <div class="report-summary-item">
+          <div class="label">Highest Income</div>
+          <div class="value income">${formatCurrency(highestInc)}</div>
+        </div>
+        <div class="report-summary-item">
+          <div class="label">Highest Expense</div>
+          <div class="value expense">${formatCurrency(highestExp)}</div>
+        </div>
+        <div class="report-summary-item">
+          <div class="label">Avg per Transaction</div>
+          <div class="value" style="color:#2d3436;">${formatCurrency(avgPerTxn)}</div>
+        </div>
+        <div class="report-summary-item">
+          <div class="label">Account</div>
+          <div class="value" style="color:#2d3436;font-size:13px;">${currentUser ? escHtml(currentUser.email) : '-'}</div>
+        </div>
+      </div>
+    </div>
+
+    ${sortedCats.length || sortedIncomeCats.length ? `
+    <div class="report-section">
+      <div class="report-section-title">Category Breakdown</div>
+      <div class="report-category-grid">
+        ${sortedCats.length ? `
+        <div class="report-category-card">
+          <h4><i class="fas fa-arrow-up" style="color:#ff6b6b;"></i> Expense Categories</h4>
+          ${catRows}
+        </div>` : ''}
+        ${sortedIncomeCats.length ? `
+        <div class="report-category-card">
+          <h4><i class="fas fa-arrow-down" style="color:#00b894;"></i> Income Categories</h4>
+          ${incomeCatRows}
+        </div>` : ''}
+      </div>
+    </div>` : ''}
+
+    ${sortedTxns.length ? `
+    <div class="report-section">
+      <div class="report-section-title">All Transactions (${sortedTxns.length})</div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Payment</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>${txnRows}</tbody>
+      </table>
+    </div>` : ''}
+
+    <div class="report-footer">
+      BudgetBeat &mdash; Personal Finance Manager &bull; Report generated automatically
+    </div>`;
+}
+
+downloadReportBtn.addEventListener('click', () => {
+  if (!transactions.length) {
+    showToast('No transactions to export', 'info');
+    return;
+  }
+  generateReport();
+  setTimeout(() => window.print(), 200);
+});

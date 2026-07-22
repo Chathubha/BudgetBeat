@@ -142,6 +142,10 @@
           <p id="pageSubtitle">Overview of your finances</p>
         </div>
         <div class="topbar-actions">
+          <button class="topbar-download-btn" id="downloadReportBtn" title="Download Report">
+            <i class="fas fa-file-pdf"></i>
+            <span>Download Report</span>
+          </button>
           <div class="theme-toggle">
             <button id="themeBtn"><i class="fas fa-moon"></i></button>
           </div>
@@ -194,7 +198,7 @@
         <div class="charts-row">
           <div class="chart-card">
             <div class="chart-header">
-              <h3>Income vs Expenses</h3>
+<h3>Expenses by Category</h3>
             </div>
             <div class="chart-body">
               <canvas id="incomeVsExpenseChart"></canvas>
@@ -431,7 +435,9 @@
             <option value="90">Last 3 Months</option>
             <option value="365">Last Year</option>
             <option value="all">All Time</option>
+            <option value="day">Day by Day</option>
           </select>
+          <input type="date" id="analyticsDayPicker" style="display:none;" />
         </div>
 
         <div class="analytics-grid">
@@ -527,6 +533,9 @@
       <span id="toastMessage">Transaction added successfully!</span>
     </div>
   </div>
+
+  <!-- Print Report (hidden, used only for printing/PDF) -->
+  <div id="printReport" class="print-report"></div>
 
   <script src="app.js"></script>
 </body>

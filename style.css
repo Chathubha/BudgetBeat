@@ -473,6 +473,33 @@ body {
 .theme-toggle button:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: rotate(15deg); }
 .theme-toggle button:active { transform: rotate(30deg) scale(0.95); }
 
+.topbar-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+}
+
+.topbar-download-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.topbar-download-btn i { font-size: 15px; }
+
 .topbar-date {
   display: flex;
   align-items: center;
@@ -1411,6 +1438,26 @@ body {
   box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
+.analytics-controls input[type="date"] {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 48px;
+  backdrop-filter: blur(8px);
+}
+
+.analytics-controls input[type="date"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
 .analytics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1974,4 +2021,244 @@ body {
 
   .quick-buttons { gap: 6px; }
   .quick-btn { padding: 10px 6px; min-height: 46px; }
+  .topbar-download-btn span { display: none; }
+  .topbar-download-btn { padding: 8px 10px; }
+}
+
+/* ========== PRINT REPORT ========== */
+.print-report {
+  display: none;
+}
+
+.print-report * {
+  font-family: 'Inter', Arial, sans-serif;
+}
+
+.print-report .report-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid #2d3436;
+}
+
+.print-report .report-logo {
+  font-size: 28px;
+  font-weight: 800;
+  color: #2d3436;
+  margin-bottom: 4px;
+}
+
+.print-report .report-logo i {
+  color: #6c5ce7;
+  margin-right: 8px;
+}
+
+.print-report .report-subtitle {
+  font-size: 13px;
+  color: #636e72;
+}
+
+.print-report .report-date {
+  font-size: 12px;
+  color: #636e72;
+  margin-top: 6px;
+}
+
+.print-report .report-section {
+  margin-bottom: 24px;
+}
+
+.print-report .report-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3436;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #dfe6e9;
+}
+
+.print-report .report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.print-report .report-summary-item {
+  background: #f8f9fa;
+  border: 1px solid #dfe6e9;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+}
+
+.print-report .report-summary-item .label {
+  font-size: 11px;
+  color: #636e72;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.print-report .report-summary-item .value {
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.print-report .report-summary-item .value.income { color: #00b894; }
+.print-report .report-summary-item .value.expense { color: #ff6b6b; }
+.print-report .report-summary-item .value.balance-pos { color: #00b894; }
+.print-report .report-summary-item .value.balance-neg { color: #ff6b6b; }
+
+.print-report .report-category-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.print-report .report-category-card {
+  background: #f8f9fa;
+  border: 1px solid #dfe6e9;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.print-report .report-category-card h4 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #2d3436;
+}
+
+.print-report .report-cat-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.print-report .report-cat-name {
+  width: 120px;
+  flex-shrink: 0;
+  color: #2d3436;
+  font-weight: 500;
+}
+
+.print-report .report-cat-bar-fill {
+  flex: 1;
+  height: 12px;
+  background: #dfe6e9;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.print-report .report-cat-bar-inner {
+  height: 100%;
+  border-radius: 6px;
+}
+
+.print-report .report-cat-amount {
+  width: 80px;
+  text-align: right;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: #2d3436;
+}
+
+.print-report .report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.print-report .report-table thead th {
+  background: #2d3436;
+  color: #fff;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.print-report .report-table tbody tr {
+  border-bottom: 1px solid #dfe6e9;
+}
+
+.print-report .report-table tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.print-report .report-table tbody td {
+  padding: 8px 12px;
+  color: #2d3436;
+}
+
+.print-report .report-table .amount-income {
+  color: #00b894;
+  font-weight: 700;
+}
+
+.print-report .report-table .amount-expense {
+  color: #ff6b6b;
+  font-weight: 700;
+}
+
+.print-report .report-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.print-report .report-type-badge.income {
+  background: #d4edda;
+  color: #155724;
+}
+
+.print-report .report-type-badge.expense {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.print-report .report-footer {
+  margin-top: 30px;
+  padding-top: 16px;
+  border-top: 2px solid #dfe6e9;
+  text-align: center;
+  font-size: 11px;
+  color: #636e72;
+}
+
+/* ========== PRINT MEDIA ========== */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #printReport,
+  #printReport * {
+    visibility: visible !important;
+  }
+
+  #printReport {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px;
+    background: #fff;
+    color: #2d3436;
+  }
+
+  @page {
+    margin: 15mm;
+    size: A4;
+  }
 }
