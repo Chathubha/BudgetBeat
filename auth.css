@@ -195,6 +195,7 @@
   background: var(--bg-card, #ffffff);
   box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.15);
   padding-left: 48px;
+  transform: translateY(-1px);
 }
 
 .auth-input-group input:focus + i,
@@ -241,7 +242,7 @@
 }
 
 .auth-btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.97);
 }
 
 /* ========== AUTH SWITCH ========== */

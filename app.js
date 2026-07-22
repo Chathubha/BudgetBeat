@@ -628,6 +628,20 @@ function formatCurrency(amount) {
   });
 }
 
+function animateValue(elem, oldVal, newVal) {
+  if (oldVal === newVal) return;
+  elem.classList.add('updated');
+  elem.textContent = newVal;
+  setTimeout(() => elem.classList.remove('updated'), 300);
+}
+
+function formatNumber(n) {
+  return parseFloat(n).toLocaleString('en-LK', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 function getCategoryIcon(cat) {
   const icons = {
     'Food & Drinks': 'fa-utensils',
@@ -744,7 +758,7 @@ function renderAll() {
   const balance = incomeTotal - expenseTotal;
 
   // Sidebar
-  sidebarBalance.textContent = formatCurrency(balance);
+  animateValue(sidebarBalance, sidebarBalance.textContent, formatCurrency(balance));
 
   renderCards(incomeTotal, expenseTotal, balance);
   renderRecent();
@@ -760,13 +774,13 @@ function renderCards(incomeTotal, expenseTotal, balance) {
   const monthExpense = getMonthTransactions('expense').reduce((s, t) => s + t.amount, 0);
 
   // Balance card
-  balanceAmount.textContent = formatCurrency(balance);
+  animateValue(balanceAmount, balanceAmount.textContent, formatCurrency(balance));
   balanceAmount.style.color = balance >= 0 ? 'var(--income-color)' : 'var(--expense-color)';
   balanceChange.textContent = balance >= 0 ? '💰 You\'re saving!' : '⚠️ Overspending!';
   balanceChange.style.color = balance >= 0 ? 'var(--income-color)' : 'var(--expense-color)';
 
   // Income card
-  totalIncome.textContent = formatCurrency(incomeTotal);
+  animateValue(totalIncome, totalIncome.textContent, formatCurrency(incomeTotal));
   const prevIncome = transactions.filter(t =>
     t.type === 'income' && getMonthYear(t.date) === getPreviousMonthYear()
   ).reduce((s, t) => s + t.amount, 0);
@@ -782,7 +796,7 @@ function renderCards(incomeTotal, expenseTotal, balance) {
   }
 
   // Expense card
-  totalExpenseElem.textContent = formatCurrency(expenseTotal);
+  animateValue(totalExpenseElem, totalExpenseElem.textContent, formatCurrency(expenseTotal));
   const prevExpense = transactions.filter(t =>
     t.type === 'expense' && getMonthYear(t.date) === getPreviousMonthYear()
   ).reduce((s, t) => s + t.amount, 0);
@@ -798,7 +812,12 @@ function renderCards(incomeTotal, expenseTotal, balance) {
   }
 
   // Count card
-  totalCount.textContent = transactions.length;
+  const oldCount = totalCount.textContent;
+  if (oldCount !== String(transactions.length)) {
+    totalCount.classList.add('updated');
+    totalCount.textContent = transactions.length;
+    setTimeout(() => totalCount.classList.remove('updated'), 300);
+  }
   const totalAmt = incomeTotal + expenseTotal;
   avgTransaction.textContent = `Total: ${formatCurrency(totalAmt)}`;
 }
@@ -887,6 +906,7 @@ function renderExpensesTable() {
           <div class="empty-state">
             <i class="fas fa-search"></i>
             <p>No transactions found</p>
+            <p class="empty-state-sub">Try adjusting your filters or search</p>
           </div>
         </td>
       </tr>`;
@@ -900,7 +920,7 @@ function renderExpensesTable() {
     const prefix = isIncome ? '+' : '-';
 
     return `
-    <tr>
+    <tr style="animation-delay: ${i * 0.03}s">
       <td>${i + 1}</td>
       <td><span class="type-badge ${badgeClass}">
         <i class="fas ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
